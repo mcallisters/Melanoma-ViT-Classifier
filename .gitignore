@@ -1,0 +1,20 @@
+# Data
+data/raw/
+data/preprocessed/
+data/*.zip
+
+# Model checkpoints and large artifacts
+models/*.pt
+models/*.pth
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Environment
+.DS_Store
+*.egg-info/
+
+# Colab/Drive sync junk
+.conda/

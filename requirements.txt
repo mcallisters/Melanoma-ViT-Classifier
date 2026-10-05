@@ -1,0 +1,16 @@
+torch>=2.13.0
+torchvision>=0.28.0
+numpy>=2.4.0
+timm
+streamlit
+grad-cam
+einops
+albumentations
+opencv-python
+pillow
+pandas
+scikit-learn
+scipy
+matplotlib
+seaborn
+imagehash
