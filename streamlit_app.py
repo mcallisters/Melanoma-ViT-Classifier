@@ -91,7 +91,7 @@ st.markdown("""
 # ========== CONFIGURATION ==========
 PROJECT_ROOT = Path(__file__).parent
 MODELS_DIR = PROJECT_ROOT / "models"
-VAL_DIR = PROJECT_ROOT / "data" / "preprocessed" / "val"
+EXAMPLES_DIR = PROJECT_ROOT / "assets" / "sample_images"
 
 IMG_SIZE = 224
 DEVICE = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
@@ -305,16 +305,18 @@ def main():
             label_visibility="collapsed"
         )
 
-        # Example images, if a val/ split is present locally
-        if VAL_DIR.exists():
+        # Example images -- a small curated set shipped in the repo under
+        # assets/sample_images/, so the picker works on the deployed app too
+        # (the full data/preprocessed/val/ dataset is not committed to git).
+        if EXAMPLES_DIR.exists():
             st.subheader("Or select an example image")
             example_category = st.radio(
                 "Example category:",
                 ["melanoma", "nevus"],
                 horizontal=True
             )
-            example_dir = VAL_DIR / example_category
-            example_files = sorted(example_dir.glob("*.jpg"))[:50]  # cap the list for UI speed
+            example_dir = EXAMPLES_DIR / example_category
+            example_files = sorted(example_dir.glob("*.jpg"))
 
             if example_files:
                 selected_example = st.selectbox(
@@ -331,7 +333,7 @@ def main():
                 st.info(f"No example images found in {example_dir}")
         else:
             st.caption(
-                "No local val/ dataset found -- example image picker is unavailable. "
+                "No example images found -- example image picker is unavailable. "
                 "Upload your own image above."
             )
 
