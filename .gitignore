@@ -4,7 +4,10 @@ data/preprocessed/
 data/*.zip
 
 # Model checkpoints and large artifacts
+# Full checkpoints (backbone + head, ~1.1GB each) are excluded.
+# The small "head-only" checkpoints (just the classifier, ~1MB) are kept.
 models/*.pt
+!models/*_head.pt
 models/*.pth
 
 # Python

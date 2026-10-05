@@ -100,10 +100,15 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 # Available checkpoints -- maps a friendly label to a filename.
-# Both are produced by scripts/train_vit.py; see README for how each was trained.
+# These are the small "head-only" checkpoints produced by
+# scripts/strip_checkpoint.py from the full checkpoints scripts/train_vit.py
+# writes. They contain only the trained classifier weights (a few MB) --
+# the frozen ViT-L/16 backbone is re-downloaded from timm's ImageNet-pretrained
+# weights at load time, since it's identical to the public pretrained model
+# and was never actually modified during training. See README for details.
 AVAILABLE_MODELS = {
-    "ViT-L/16 (pos_weight, recommended)": "vit_l16_posweight_best.pt",
-    "ViT-L/16 (unweighted, matches paper baseline)": "vit_l16_best.pt",
+    "ViT-L/16 (pos_weight, recommended)": "vit_l16_posweight_best_head.pt",
+    "ViT-L/16 (unweighted, matches paper baseline)": "vit_l16_best_head.pt",
 }
 
 # Threshold profiles from scripts/evaluate.py / threshold_sweep.py, tuned on the
@@ -121,8 +126,11 @@ THRESHOLD_PROFILES = {
 class MelanomaViT(nn.Module):
     def __init__(self, freeze_backbone: bool = True):
         super().__init__()
+        # pretrained=True: we only ship the classifier head (see AVAILABLE_MODELS
+        # comment above), so the backbone must actually fetch real ImageNet
+        # weights here rather than starting from random initialization.
         self.backbone = timm.create_model(
-            "vit_large_patch16_224", pretrained=False, num_classes=0
+            "vit_large_patch16_224", pretrained=True, num_classes=0
         )
         if freeze_backbone:
             for param in self.backbone.parameters():
@@ -149,11 +157,19 @@ class MelanomaViT(nn.Module):
 
 
 # ========== LOAD MODEL (CACHED) ==========
+def _strip_classifier_prefix(state_dict):
+    """Head checkpoints save keys as 'classifier.0.weight', etc. (the full
+    model's state_dict naming). model.classifier.load_state_dict() expects
+    them without that leading 'classifier.' prefix."""
+    return {k.removeprefix("classifier."): v for k, v in state_dict.items()}
+
+
 @st.cache_resource
 def load_model(checkpoint_filename: str):
     model = MelanomaViT(freeze_backbone=True)
     checkpoint_path = MODELS_DIR / checkpoint_filename
-    model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE))
+    classifier_state = torch.load(checkpoint_path, map_location=DEVICE)
+    model.classifier.load_state_dict(_strip_classifier_prefix(classifier_state))
     model = model.to(DEVICE)
     model.eval()
     return model
@@ -232,8 +248,9 @@ def main():
 
         if not available_checkpoints:
             st.error(
-                "No model checkpoints found in `models/`. Train a model first "
-                "(see scripts/train_vit.py) or copy a checkpoint into the models/ folder."
+                "No model checkpoints found in `models/`. Run scripts/strip_checkpoint.py "
+                "on a full checkpoint first (see scripts/train_vit.py), or copy a head "
+                "checkpoint into the models/ folder."
             )
             st.stop()
 
